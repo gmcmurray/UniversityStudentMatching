@@ -37,17 +37,22 @@ bool sortStudent(int dat1, int dat2, vector<university> &uni, int unidex)
     int index2 = findIndex(uni[unidex].preference, dat2);
     return (index1 <  index2);
 }
-//
-//bool RogueCouple(int &uid, int &sid, vector<student> &slist, vector<university> &ulist)
-//{
-//    int uIndex = findIndex(ulist[uid].preference, sid); // university's preference of student
-//    int sIndex = findIndex(slist[sid].preference, uid); // student's preference of university
-//    
-//    if (uIndex < uCurrent && sIndex < sCurrent)  // both prefer each other over current
-//        return true;
-//    else
-//        return false;
-//} 
+// Rougue Couple check - 
+bool RogueCouple(int &s, vector<student>& slist, vector<university>& ulist)
+{
+    int mIndex = findIndex(slist[s].preference, slist[s].engaged);  // spouse index in preference list
+    if (mIndex != 0)
+    {
+        for (int i = mIndex; i >= 0; --i)
+        {
+            int uIndex = findIndex(ulist[slist[s].preference[i]].preference, s);  // current student index in preference list
+            int uCurrent = findIndex(ulist[slist[s].preference[i]].preference, slist[s].engaged);  // current student index in preference list
+            if (uIndex < uCurrent)
+                return true;
+        }
+    }
+    return false;
+}
 // Generate a sequence of M random integers that sum to N
 std::vector<int> 
 generateVariables(int M, int N) {
@@ -60,12 +65,11 @@ generateVariables(int M, int N) {
         if(randomValue == 0)   // Ensure that the random value is not 0
             randomValue = 1;
         variables.push_back(randomValue);
-        N -= randomValue;     // Adjust N by subtracting the generated value
+        if(N - randomValue > 0 )
+             N -= randomValue;     // Adjust N by subtracting the generated value
     }
-
     // The last variable is the remaining value needed to reach the target sum N
     variables.push_back(N);
-
     return variables;
 }
 const int GROUP_SIZE = 10;     // number of students in the group, 
@@ -79,7 +83,8 @@ int main()
     std::mt19937 gen(rd());
     std::mt19937 gen1(rd1());
 
-    // Generate a sequence of integers for preference lists for students and universities
+    // Generate a sequence of integers for preference lists for students 
+    // and universities
     std::vector<int> sequence;
     std::vector<int> sequence1;
     for (size_t i = 0; i < GROUP_SIZE; i++)
@@ -118,7 +123,6 @@ int main()
     // University lists initialized with empty lists, list of students visiting university i
     for (int i = 0; i < UNIVERSITY_SIZE; i++)
         universityLists.push_back(universityList);
-
     // Start matching
     for (;;)
     {
@@ -133,7 +137,6 @@ int main()
             if (it == universityLists[universityId].end())
                 universityLists[universityId].push_back((*studentIter).id);   
         }
-
         // Check for termination, each university reaches exact capacity
         int suitors = 0;
         for (int iter = 0;iter < UNIVERSITY_SIZE; iter++)
@@ -165,7 +168,6 @@ int main()
             }
         }
     }
-     
     // Update engaged status for students
     for (size_t i=0; i< universityLists.size(); i++)
     {
@@ -175,6 +177,7 @@ int main()
 
     auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_seconds = end_time - start_time;
+    // Output results
      std::cout << "University Capacity" << '\n';
      for (std::size_t i = 0; i < universityCapacity.size(); ++i) {
          std::cout << "University " << i << ": " << universityCapacity[i] << '\n';
@@ -185,9 +188,41 @@ int main()
      {
          for (auto x : *itr)
          {
-             std::cout << " Student " << x << " will attend University: " << distance(universityLists.begin(),itr)  << '\n';
+             std::cout << " Student " << x << " will attend University: " 
+                 << distance(universityLists.begin(), itr) << " is rogue "
+                 << (bool)RogueCouple(x, students, universitys) << '\n';
          }
      }
     std::cout << "Elapsed time: " << elapsed_seconds.count() << " seconds." << std::endl;
+    
+    // Forced Rogue
+    vector<student> StudentsR;
+    vector<university> UniversitysR;
+    student s0(0, { 0,1 });
+    student s1(1, { 1,0 });
+    university u0(0, { 0,1 });
+    university u1(1, { 1,0 });
+    u0.engaged = 1;            // force university 0 to be engaged to student 1
+    u1.engaged = 0;            // force university 1 to be engaged to student 0
+    s0.engaged = 1;            // force student 0 to be engaged to university 1
+    s1.engaged = 0;            // force student 1 to be engaged to university 0
+    StudentsR.push_back(s0);
+    StudentsR.push_back(s1);
+    UniversitysR.push_back(u0);
+    UniversitysR.push_back(u1);
+    cout << "Forced Rouge Couple" << " Student: " << 1 << " University: " << 0 << " is rouge : "
+        << (bool)RogueCouple(u1.id, StudentsR, UniversitysR) << '\n';
+    StudentsR.clear();
+    UniversitysR.clear();
+    u0.engaged = 0;            // force university 0 to be engaged to student 0
+    u1.engaged = 1;            // force university 1 to be engaged to student 1
+    s0.engaged = 0;            // force student 0 to be engaged to university 0
+    s1.engaged = 1;            // force student 1 to be engaged to university 1
+    StudentsR.push_back(s0);
+    StudentsR.push_back(s1);
+    UniversitysR.push_back(u0);
+    UniversitysR.push_back(u1);
+    cout << "Rouge Couple test on stable matching " << " Student: " << 1 << " University: " << 0 << " is rouge : "
+        << (bool)RogueCouple(u1.id, StudentsR, UniversitysR) << '\n';
     return 0;
 }
